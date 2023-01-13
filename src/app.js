@@ -55,6 +55,16 @@ app.post("/participants", async (req, res)=>{
     res.sendStatus(201)
 })
 
+app.get("/participants", async (req, res)=>{
+    try{
+        const resposta = await db.collection("participants").find().toArray()
+        res.send(resposta)
+    } catch (err){
+        res.send(err)
+    }
+})
+
+
 
 app.listen(process.env.PORT, ()=>{
     console.log("Server running...")
