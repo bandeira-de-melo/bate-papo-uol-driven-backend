@@ -138,8 +138,8 @@ app.get("/messages", async (req, res) => {
               "from": lastmes.from
             }
           })
-          return res.send(formatedLastMessages.reverse());
-        } else if(limit && limit < 1 || typeof(limit)!== "number"){
+          return res.send(lastMessages);
+        } else if(limit <= 0 || isNaN(limit)=== true){
           return res.sendStatus(442)
         } 
           return res.send(allMessagesUserCanSee)
@@ -169,7 +169,7 @@ if(user === "") res.send(422)
 });
 
 setInterval(async () => {
-  let goneParticipant;
+  const goneParticipants =[]
   try {
     const participants = await db.collection("participants").find().toArray();
     const inactiveParticipants = participants.filter((part) => {
@@ -181,11 +181,13 @@ setInterval(async () => {
       .deleteMany({ lastStatus: { $lt: Date.now() - 10000 } });
 
     inactiveParticipants.map((part) => {
-      goneParticipant = {   
-        type: 'status',
-        text: 'sai da sala...',
+      goneParticipants.push({
         from: part.name,
-      };
+        to: 'Todos',
+        text: 'sai da sala...',
+        type: 'status',
+        time: dayjs().format("HH:mm:ss"),
+      });
     });
   } catch (err) {
     console.log(err);
