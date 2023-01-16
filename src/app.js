@@ -2,7 +2,7 @@ import dayjs from 'dayjs'
 import Joi from "joi"
 import express from "express"
 import cors from "cors"
-import { MongoClient } from "mongodb"
+import { MongoClient, ObjectId } from "mongodb"
 import dotenv from 'dotenv'
 dotenv.config()
 
@@ -31,7 +31,7 @@ const participantSchema = Joi.object().keys({
 const messagesSchema = Joi.object().keys({
     to: Joi.string().min(1),
     text: Joi.string().min(1),
-    type: Joi.string().min(1)
+    type: Joi.string().min(1).valid("message","private_message")
 } )
 
 //rotas
@@ -131,7 +131,44 @@ app.get("/messages", async (req, res) => {
   }
 });
 
+app.post("/status", async (req, res)=>{
+  const user = req.headers.user
+  try{
+    const dbuser = await db.collection("participants").findOne({ name: user });
+    if (!dbuser) return res.sendStatus(404);
+    await db.collection("participants").updateOne({name : user},{$set:{lastStatus: Date.now()}})
+    res.sendStatus(200)
+  } catch (err) {
 
+  }
+
+
+})
+
+setInterval(async ()=>{
+
+  try{
+    const participants = await db.collection("participants").find().toArray()
+    const inactiveParticipants = participants.filter(part =>{
+      Date.now() - 10000  > part.lastStatus
+    })
+    
+    await db.collection("participants").deleteMany({lastStatus: {$lt: Date.now() - 10000}})
+
+    inactiveParticipants.map( async(part)=>{
+      await db.collection("messages").insertOne({
+        from: part.name,
+        to:'Todos',
+        text:'sai da sala...',
+        type:'status',
+        time: dayjs().format('HH:mm:ss')
+      })
+    })
+
+  } catch (err){
+      console.log(err)
+  }
+}, 60000)
 
 
 app.listen(5000, ()=>{
