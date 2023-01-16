@@ -120,20 +120,22 @@ app.get("/messages", async (req, res) => {
       messages.map((message) => {
         if (message.type === "private_message") {
           if (message.to === dbuser.name || message.from === dbuser.name) {
-            allMessagesUserCanSee.push(message);
+            allMessagesUserCanSee.push({"to":message.to,"text": message.text,"type":message.type,"from": message.from});
           }
         } else if(message.type === "message"){
-          allMessagesUserCanSee.push(message);
+          allMessagesUserCanSee.push({"to":message.to,"text": message.text,"type":message.type,"from": message.from});
         } else if(message.type === "status"){
-          allMessagesUserCanSee.push(message)
+          allMessagesUserCanSee.push({"to":message.to,"text": message.text,"type":message.type,"from": message.from})
         }
         })
-        if (limit && limit > 0 && typeof(limit) == "number"){
+        if (limit && limit > 0 && typeof(limit) === "number"){
           const lastMessages = allMessagesUserCanSee.slice(-limit);
           return res.send(lastMessages);
-        } else {
+        } else if(limit && limit < 1 || typeof(limit)!== "number"){
+          return res.sendStatus(442)
+        } 
           return res.send(allMessagesUserCanSee)
-        }
+        
       ;
     } else {
       return res.sendStatus(404);
@@ -159,6 +161,7 @@ if(user === "") res.send(422)
 });
 
 setInterval(async () => {
+  const goneParticipants =[]
   try {
     const participants = await db.collection("participants").find().toArray();
     const inactiveParticipants = participants.filter((part) => {
@@ -169,12 +172,12 @@ setInterval(async () => {
       .collection("participants")
       .deleteMany({ lastStatus: { $lt: Date.now() - 10000 } });
 
-    inactiveParticipants.map(async (part) => {
-      await db.collection("messages").insertOne({
+    inactiveParticipants.map((part) => {
+      goneParticipants.push({
         from: part.name,
-        to: "Todos",
-        text: "sai da sala...",
-        type: "status",
+        to: 'Todos',
+        text: 'sai da sala...',
+        type: 'status',
         time: dayjs().format("HH:mm:ss"),
       });
     });
