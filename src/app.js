@@ -25,13 +25,13 @@ app.use(cors())
 
 //schemas
 const participantSchema = Joi.object().keys({
-    name: Joi.string().min(1)
+    name: Joi.string().required()
 })
 
 const messagesSchema = Joi.object().keys({
-    to: Joi.string().min(1),
-    text: Joi.string().min(1),
-    type: Joi.string().min(1).valid("message","private_message")
+    to: Joi.string().required(),
+    text: Joi.string().required(),
+    type: Joi.string().valid("message","private_message","status").required()
 } )
 
 //rotas
@@ -53,7 +53,7 @@ app.post("/participants", async (req, res)=>{
             from: value.name, 
             to: 'Todos', 
             text: 'oi galera', 
-            type: 'message', 
+            type: 'status', 
             time: dayjs().format('HH:mm:ss')
         })
         res.sendStatus(201)
@@ -74,8 +74,8 @@ app.get("/participants", async (req, res)=>{
 
 app.post("/messages", async (req, res)=>{
     try{
-        const {error, value} = messagesSchema.validate(req.body)
-        
+        const {error, value} = messagesSchema.validate(req.body, {abortEarly: false})
+        if(error) console.log(error)
         const user = req.headers.user
         console.log(user)
 
@@ -98,7 +98,7 @@ app.post("/messages", async (req, res)=>{
 
 app.get("/messages", async (req, res) => {
     const user = req.headers.user
-    const { limit } = parseInt(req.query);
+    const  limit  = parseInt(req.query.limit);
   try {
     
     const dbuser = await db.collection("participants").findOne({ name: user });
@@ -118,10 +118,9 @@ app.get("/messages", async (req, res) => {
         allMessages.push(message)
       }
     });
-    if (limit) {
-      const lastMessages = allMessages.slice(
-        Math.max(allMessages.length - limit, 0)
-      );
+    if (limit && limit > 0 && typeof(limit)=="number") {
+      const lastMessages = allMessages.slice(- limit)
+      ;
       return res.send(lastMessages);
     } else {
       return res.send(allMessages)
@@ -168,7 +167,7 @@ setInterval(async ()=>{
   } catch (err){
       console.log(err)
   }
-}, 60000)
+}, 15000)
 
 
 app.listen(5000, ()=>{
