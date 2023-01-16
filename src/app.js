@@ -120,12 +120,12 @@ app.get("/messages", async (req, res) => {
       messages.map((message) => {
         if (message.type === "private_message") {
           if (message.to === dbuser.name || message.from === dbuser.name) {
-            allMessagesUserCanSee.push({"to":message.to,"text": message.text,"type":message.type,"from": message.from});
+            allMessagesUserCanSee.push({"to":message.to,"text": message.text,"type":message.type,"from": message.from, time: message.time});
           }
         } else if(message.type === "message"){
-          allMessagesUserCanSee.push({"to":message.to,"text": message.text,"type":message.type,"from": message.from});
+          allMessagesUserCanSee.push({"to":message.to,"text": message.text,"type":message.type,"from": message.from, time: message.time});
         } else if(message.type === "status"){
-          allMessagesUserCanSee.push({"to":message.to,"text": message.text,"type":message.type,"from": message.from})
+          allMessagesUserCanSee.push({"to":message.to,"text": message.text,"type":message.type,"from": message.from, time: message.time})
         }
         })
         if (limit && limit > 0 && typeof(limit) === "number"){
