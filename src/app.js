@@ -146,6 +146,32 @@ if(user === "") res.send(422)
   }
 });
 
+setInterval(async () => {
+  let goneParticipants;
+  try {
+    const participants = await db.collection("participants").find().toArray();
+    const inactiveParticipants = participants.filter((part) => {
+      Date.now() - 10000 > part.lastStatus;
+    });
+
+    await db
+      .collection("participants")
+      .deleteMany({ lastStatus: { $lt: Date.now() - 10000 } });
+
+    inactiveParticipants.map((part) => {
+      goneParticipants.push({
+        from: part.name,
+        to: 'Todos',
+        text: 'sai da sala...',
+        type: 'status',
+        time: dayjs().format("HH:mm:ss"),
+      });
+    });
+  } catch (err) {
+    console.log(err);
+  }
+}, 15000);
+
 
 app.listen(5000, () => {
   console.log("Server running on port 5000");
