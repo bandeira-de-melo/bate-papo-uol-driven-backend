@@ -107,29 +107,43 @@ app.post("/messages", async (req, res) => {
   }
 });
 
-
-
 app.get("/messages", async (req, res) => {
-  const limit = req.query.limit
-  const { user } = req.headers
-  
-  if (limit && isNaN(limit) || parseInt(limit) <= 0 ){
-    return res.sendStatus(422)
-  } 
+  const user = req.headers.user;
+  const limit = parseInt(req.query.limit);
 
   try {
+    const messages = await db.collection("messages").find().toArray();
 
-    const messages = await db.collection("messages").find({
-      $or: [{ to: { $in: [user, "Todos"] } }, { from: user },{ type: "message" }]
-    }).limit(Number(limit)).toArray()
-
-    res.send(messages)
-
+    const dbuser = await db.collection("participants").findOne({ name: user });
+    if(dbuser){
+      const allMessagesUserCanSee = [];
+      messages.map((message) => {
+        if (message.type === "private_message") {
+          if (message.to === dbuser.name || message.from === dbuser.name) {
+            allMessagesUserCanSee.push({"to":message.to,"text": message.text,"type":message.type,"from": message.from});
+          }
+        } else if(message.type === "message"){
+          allMessagesUserCanSee.push({"to":message.to,"text": message.text,"type":message.type,"from": message.from});
+        } else if(message.type === "status"){
+          allMessagesUserCanSee.push({"to":message.to,"text": message.text,"type":message.type,"from": message.from})
+        }
+        })
+        if (limit && limit > 0 && typeof(limit) === "number"){
+          const lastMessages = allMessagesUserCanSee.slice(-limit);
+          return res.send(lastMessages);
+        } else if(limit && limit < 1 || typeof(limit)!== "number"){
+          return res.sendStatus(442)
+        } 
+          return res.send(allMessagesUserCanSee)
+        
+      ;
+    } else {
+      return res.sendStatus(404);
+    }
   } catch (err) {
-    console.error(err)
+    console.log(err.details);
   }
-})
-
+});
 
 app.post("/status", async (req, res) => {
 const user = req.headers.user
@@ -147,7 +161,7 @@ if(user === "") res.send(422)
 });
 
 setInterval(async () => {
-  let goneParticipants;
+  const goneParticipants =[]
   try {
     const participants = await db.collection("participants").find().toArray();
     const inactiveParticipants = participants.filter((part) => {
@@ -171,7 +185,6 @@ setInterval(async () => {
     console.log(err);
   }
 }, 15000);
-
 
 app.listen(5000, () => {
   console.log("Server running on port 5000");
